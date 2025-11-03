@@ -1,0 +1,69 @@
+/**
+ * @file main.cpp
+ * @brief Programa principal para la simulación de una partícula en una caja 1D con colisiones inelásticas.
+ *
+ * Este archivo ejecuta el flujo completo del experimento numérico:
+ * 1. Solicita al usuario los parámetros físicos y temporales.
+ * 2. Valida los datos ingresados.
+ * 3. Ejecuta la simulación de movimiento con colisiones no elásticas.
+ * 4. Genera las gráficas estáticas del movimiento y la energía cinética.
+ * 5. Crea una animación GIF del movimiento de la partícula dentro de la caja.
+ *
+ * Los módulos encargados de los cálculos y visualización se encuentran en:
+ * - `Proceso.h`: contiene las funciones de simulación física (solicitarDatos, validarDatos, simularMovimiento).
+ * - `Grafica.h`: incluye las funciones de graficación (`generarGraficas`) y animación (`generarAnimacion`).
+ *
+ * El comportamiento de las colisiones está gobernado por el **coeficiente de restitución `e`**,
+ * que determina la pérdida de energía cinética en cada impacto con las paredes.
+ *
+ * @author [Laura G. Riaño N.-López P. Nicolas-Vitola G. Jésus D.- Mariana I. Velandia R.]
+ * @version 2.0
+ * @date octubre 2025
+ */
+
+#include <iostream>
+#include <iomanip>
+#include <fstream>
+#include "../funcion/Proceso.h"
+#include "../funcion/Grafica.h"
+
+using namespace std;
+
+/**
+ * @brief Función principal del programa.
+ *
+ * Controla el flujo de ejecución completo:
+ * - Llama a las funciones de entrada y validación de datos.
+ * - Ejecuta la simulación del movimiento con colisiones inelásticas.
+ * - Genera las gráficas y la animación correspondiente.
+ *
+ * @return 0 si la ejecución fue exitosa.
+ */
+int main() {
+    double L, x0, v0, t0, tf, dt, e;
+
+    // === 1. Ejecutar simulación ===
+    solicitarDatos(L, x0, v0, t0, tf, dt, e);
+    validarDatos(L, x0, v0, t0, tf, dt, e);
+    simularMovimiento(L, x0, v0, t0, tf, dt, e);
+
+    // === 2. Generar gráficas ===
+    cout << "\nPresione Enter para generar las graficas...";
+    string temp;
+    getline(cin, temp);  ///< Limpia el buffer de entrada
+    getline(cin, temp);  ///< Espera confirmación del usuario
+
+    generarGraficas();
+
+    // === 3. Generar animación ===
+    cout << "\nPresione Enter para generar la animacion GIF...";
+    getline(cin, temp);
+
+    generarAnimacion();
+
+    // === 4. Finalizar ===
+    cout << "\nPresione Enter para salir...";
+    getline(cin, temp);
+
+    return 0;
+}

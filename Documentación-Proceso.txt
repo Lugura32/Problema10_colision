@@ -1,0 +1,261 @@
+/**
+ * @file Particle_1D_Box.cpp
+ * @brief Simulación del movimiento de una partícula en una caja 1D con colisiones no elásticas.
+ *
+ * Este programa reutiliza el código original `Particle_1D_Box.cpp` y lo modifica para incluir colisiones
+ * inelásticas con las paredes, usando el coeficiente de restitución `e` el cual se encuentra en el intervalo (0.1],
+ * de tal manera que la velocidad después del choque sigue la relación:
+ *     v' = -e * v,
+ * Adicionalmente se calculara la energía cinética en cada instante de tiempo, ese valor ,junto la variación del tiempo,
+ *posición y velocidad se regristraran en un archivo de salida.
+ *
+ *
+ * @version 2.0
+ * @date octubre 2025
+ * @author [Laura G. Riaño N.-López P. Nicolas-Vitola G. Jésus D.- Mariana I. Velandia R.]
+ */
+
+#include <iostream>
+#include <iomanip>
+#include <fstream>
+#include <cmath>
+#include "../funcion/Proceso.h"
+
+using namespace std;
+
+/// @brief Epsilon se determino como la tolerancia.
+const double EPSILON = 1.0e-9;
+
+/**
+ * @brief Solicita al usuario los parámetros de simulación.
+ *
+ * Se piden los valores de:
+ * - L: longitud de la caja.
+ * - x0: posición inicial.
+ * - v0: velocidad inicial.
+ * - t0: tiempo inicial.
+ * - tf: tiempo final.
+ * - dt: paso de tiempo.
+ * - e: coeficiente de restitución (0 < e ≤ 1).
+ *
+ */
+void solicitarDatos(double &L, double &x0, double &v0,double &t0, double &tf, double &dt, double &e) {
+    cout << "Longitud de la caja L (m): ";
+    cin >> L;
+    cout << "Posicion inicial x0 (m): ";
+    cin >> x0;
+    cout << "Velocidad inicial v0 (m/s): ";
+    cin >> v0;
+    cout << "Tiempo inicial t0 (s): ";
+    cin >> t0;
+    cout << "Tiempo final tf (s): ";
+    cin >> tf;
+    cout << "Paso de tiempo dt (s): ";
+    cin >> dt;
+    cout << "Coeficiente de restitucion e (0 < e <= 1): ";
+    cin >> e;
+}
+
+/**
+ * @brief  En la siguiente parte del codigo se validaran los datos ingresados por el usuario, cada uno por medio de los 
+ * condicionales.
+ *
+ * Esta función asegura que todos los parámetros de entrada cumplan condiciones mínimas requeridas para que la simulación
+ * funcione con normalidad: 
+ *
+ * - L > 0
+ * - 0 ≤ x0 ≤ L
+ * - v0 ≠ 0
+ * - tf > t0
+ * - 0 < dt < (tf - t0)
+ * - 0 < e ≤ 1
+ *
+ * Si alguna condición no se cumple, el programa solicita un nuevo valor.
+ * Adicionalmente, se implemento "if (cin.fail()) {		cin.clear()	 cin.ignore(10000, '\n'    } esto para que se borre el cache cuando se
+ * ingrese un valor erroneo, debido a que sin este se da un bucle infinito de volver a pedir el dato.
+ */
+
+void solicitarDatos(double &L, double &x0, double &v0,double &t0, double &tf, double &dt, double &e) {
+    cout << "Longitud de la caja L (m): ";
+    cin >> L;
+    cout << "Posicion inicial x0 (m): ";
+    cin >> x0;
+    cout << "Velocidad inicial v0 (m/s): ";
+    cin >> v0;
+    cout << "Tiempo inicial t0 (s): ";
+    cin >> t0;
+    cout << "Tiempo final tf (s): ";
+    cin >> tf;
+    cout << "Paso de tiempo dt (s): ";
+    cin >> dt;
+    cout << "Coeficiente de restitucion e (0 < e <= 1): ";
+    cin >> e;
+}
+
+void validarDatos(double &L, double &x0, double &v0,double &t0, double &tf, double &dt, double &e) {
+    // L > 0
+    while (L <= 0.0 || cin.fail()) {
+        if (cin.fail()) {
+            cin.clear();
+            cin.ignore(10000, '\n');
+        }
+        cout << "L debe ser positivo. Vuelva a ingresar L: ";
+        cin >> L;
+    }
+
+    // 0 <= x0 <= L
+    while (x0 < 0.0 || x0 > L || cin.fail()) {
+        if (cin.fail()) {
+            cin.clear();
+            cin.ignore(10000, '\n');
+        }
+        cout << "x0 debe estar en [0, L]. Vuelva a ingresar x0: ";
+        cin >> x0;
+    }
+
+    // v0 != 0
+    while (v0 == 0.0 || cin.fail()) {
+        if (cin.fail()) {
+            cin.clear();
+            cin.ignore(10000, '\n');
+        }
+        cout << "v0 no puede ser 0. Vuelva a ingresar v0: ";
+        cin >> v0;
+    }
+
+    // tf > t0
+    while (tf <= t0 || cin.fail()) {
+        if (cin.fail()) {
+            cin.clear();
+            cin.ignore(10000, '\n');
+        }
+        cout << "tf debe ser mayor que t0. Vuelva a ingresar tf: ";
+        cin >> tf;
+    }
+
+    // 0 < dt < (tf - t0)
+    while (dt <= 0.0 || dt >= (tf - t0) || cin.fail()) {
+        if (cin.fail()) {
+            cin.clear();
+            cin.ignore(10000, '\n');
+        }
+        cout << "dt debe ser positivo y menor que (tf - t0). Ingrese dt: ";
+        cin >> dt;
+    }
+
+    // 0 < e <= 1
+    while (e <= 0.0 || e > 1.0 || cin.fail()) {
+        if (cin.fail()) {
+            cin.clear();
+            cin.ignore(10000, '\n');
+        }
+        cout << "e debe estar en (0, 1]. Ingrese e: ";
+        cin >> e;
+    }
+}
+
+/**
+ * @brief Simulación del movimiento de la partícula y registro de los datos en un archivo.
+ *
+ * La simulación considera colisiones inelásticas con las paredes, aplicando la relación:
+ *     v' = -e * v
+ * Cada vez que ocurre una colisión, la energía cinética disminuye proporcionalmente al cuadrado
+ * del coeficiente de restitución (Ec' = e² * Ec).
+ *
+ * Los datos generados incluyen:
+ * - Tiempo `t`
+ * - Posición `x`
+ * - Velocidad `v`
+ * - Energía cinética `Ec`
+ *
+ * Al finalizar, se muestra el número total de colisiones y se guarda todo en el archivo
+ * `simulacion.txt`.
+ *
+ */
+void simularMovimiento(double L, double x0, double v0,double t0, double tf, double dt, double e) {
+    
+    ofstream myfile("simulacion.txt");
+    if (!myfile.is_open()) {
+        cout << "Error. No se pudo abrir el archivo para escritura." << endl;
+        return;
+    }
+
+    cout << fixed << setprecision(5);
+    cout << setw(12) << "t"
+         << setw(15) << "x"
+         << setw(15) << "v"
+         << setw(20) << "Ec" << '\n';
+
+    myfile << fixed << setprecision(5);
+    myfile << setw(12) << "t"
+           << setw(15) << "x"
+           << setw(15) << "v"
+           << setw(20) << "Energia_Cinetica" << '\n';
+
+    double t = t0, x = x0, v = v0;
+    int i = 0;
+    int n_colisiones = 0; 
+ * Se declaró la nueva variable "n_colisiones" inicializada en 0 debido a que esta funcionara como contador para eventualmente en la
+ * salida el usuario pueda saber cuantas colisiones hubieron en la simulación 
+ * 
+
+    while (t <= tf + EPSILON) {
+        double energia_cinetica = 0.5 * v * v;
+ *Otra variable declarada fue la energía cinetica, se utilizo la formula de siempre Ec=1/2mv^2. Se considero un cuerpo de m=1kg.
+ *
+
+        cout << setw(12) << t
+             << setw(15) << x
+             << setw(15) << v
+             << setw(20) << energia_cinetica << '\n';
+
+        myfile << setw(12) << t
+               << setw(15) << x
+               << setw(15) << v
+               << setw(20) << energia_cinetica << '\n';
+
+        double x_nueva = x + v * dt;
+
+        // --- Colisiones con las paredes (no elásticas) ---
+        if (x_nueva < 0.0) {
+            x = 0.0;
+            v = -e * v;
+            n_colisiones++; 
+/**
+* En este condicional se esta analizando cuando la particual colisiona con la pared izquierda de tal manera que cuando esta este cercano
+* al valor de 0 se tome como una colisión e instantaneamente se actualice su nueva velocidad, al mismo tiempo se implementa un contador  
+* de colisiones. 
+*/
+        } else if (x_nueva > L) {
+            x = L;
+            v = -e * v;
+            n_colisiones++;
+/**
+* De la misma forma que el anterior condicional funciona este, solo que este es para la "pared" derecha de la caja. Y tambien en este caso se realiza
+*
+*/
+
+        } else {
+            x = x_nueva;
+        }
+
+        i++;
+        t = t0 + i * dt;
+    }
+/**
+* Este condicional es para cualquier otro caso que no sean los anterior, es decir cuando este entre el intervalo de (0,L). 
+* En este caso x se calculara con base a la formula del movimiento uniforme rectilineo. (En este intervalo la velocidad se mantiente
+* constante).
+*/
+
+
+    myfile.close();
+*En esta parte ya se cierra el archivo y la salida de datos seran total de coliciones y los datos guardados en simulacion.txt
+
+    cout << "\n=== SIMULACION COMPLETADA ===" << endl;
+    cout << "Total de colisiones: " << n_colisiones << endl;
+    cout << "Datos guardados en 'simulacion.txt'" << endl;
+
+}
+
+}
